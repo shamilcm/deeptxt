@@ -1,6 +1,9 @@
 from __future__ import absolute_import
+
 import theano
 from theano import tensor as T
+
+from .optimizer import Optimizer
 
 class SGD(Optimizer):
     """

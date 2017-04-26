@@ -2,6 +2,10 @@ from __future__ import absolute_import
 
 from ..initializers import Initializer
 import theano
+from theano import tensor as T
+from collections import OrderedDict
+
+from .layer import Layer
 
 class Embeddings(Layer):
     """
