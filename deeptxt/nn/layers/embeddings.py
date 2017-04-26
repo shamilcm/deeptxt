@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from ..initializers import Initializer
+import theano
 
 class Embeddings(Layer):
     """
