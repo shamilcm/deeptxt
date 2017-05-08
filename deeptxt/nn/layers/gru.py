@@ -17,41 +17,41 @@ class GRU(Layer):
         self.in_dim = in_dim
         self.num_units = num_units
         self.out_dim = num_units
-        self.initialize_params(in_dim, num_units, weight_initializer, bias_initializer)
+        self.initialize_params(weight_initializer, bias_initializer)
         
-    def initialize_params(self, in_dim, num_units, weight_initializer=Initializer.norm, bias_initializer=Initializer.zeros):
+    def initialize_params(self, weight_initializer=Initializer.norm, bias_initializer=Initializer.zeros):
         self._params = OrderedDict()
         
         # Initializing W = [Wr, Wu]. dim = in_dim x (2*num_units)
-        self.W = theano.shared(name=self.name + '_W', value=np.concatenate([weight_initializer((in_dim, num_units)),
-                                                                            weight_initializer((in_dim, num_units))], axis=1)) #concat horizontally
+        self.W = theano.shared(name=self.name + '_W', value=np.concatenate([weight_initializer((self.in_dim, self.num_units)),
+                                                                            weight_initializer((self.in_dim, self.num_units))], axis=1)) #concat horizontally
         self._params[self.W.name] =  self.W
         
         # Initializing U = [Ur, Uu]. dim = num_units x (2*num_units)
-        self.U = theano.shared(name=self.name + '_U', value=np.concatenate([weight_initializer(size=(num_units, num_units)),
-                                                                            weight_initializer(size=(num_units, num_units))], axis=1))
+        self.U = theano.shared(name=self.name + '_U', value=np.concatenate([weight_initializer(size=(self.num_units, self.num_units)),
+                                                                            weight_initializer(size=(self.num_units, self.num_units))], axis=1))
         self._params[self.U.name] = self.U
 
         # Initializing b = [br, bu].  dim = 1 x (2*num_units)
-        self.b = theano.shared(name=self.name + '_b', value=bias_initializer((2*num_units,)))
+        self.b = theano.shared(name=self.name + '_b', value=bias_initializer((2*self.num_units,)))
         self._params[self.b.name] = self.b
 
         # Initializing Wx. dim = in_dim x num_units
-        self.Wx = theano.shared(name=self.name + '_Wx', value=weight_initializer((in_dim, num_units)))
+        self.Wx = theano.shared(name=self.name + '_Wx', value=weight_initializer((self.in_dim, self.num_units)))
         self._params[self.Wx.name] = self.Wx
 
         # Initializing Ux. dim = num_units x num_units
-        self.Ux = theano.shared(name=self.name + '_Ux', value=weight_initializer(size=(num_units, num_units)))
+        self.Ux = theano.shared(name=self.name + '_Ux', value=weight_initializer(size=(self.num_units, self.num_units)))
         self._params[self.Ux.name] = self.Ux
         
         # Initializing bx. dim = 1 x num_units
-        self.bx = theano.shared(name=self.name + '_bx', value=bias_initializer((num_units,)))
+        self.bx = theano.shared(name=self.name + '_bx', value=bias_initializer((self.num_units,)))
         self._params[self.bx.name] = self.bx
        
     def params(self):
         return self._params
     
-    def step(self, x_W_curr, x_Wx_curr, x_mask_curr,         h_prev, U, Ux      ):
+    def step(self, x_W_curr, x_Wx_curr, x_mask_curr, h_prev, U, Ux ):
         """
         Function for each recurrent step across timesteps
         :param x_W_curr: the dot product of input (current timestep of all samples) and W. 
