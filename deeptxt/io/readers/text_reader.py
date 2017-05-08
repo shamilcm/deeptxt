@@ -40,19 +40,21 @@ class TextReader:
             if lines == []:
                 self.reset()
                 raise StopIteration
-            samples = [[token for token in line.strip().split()] for line in lines]
+            samples = [[token for token in line.decode(self.encoding).strip().split()] for line in lines]
         else:
             samples = []
             while True:
                 line = self.dataset.readline()
                 if line == '': # check EOF
-                    self.reset()
-                    raise StopIteration
-                tokens = line.strip().split()
+                    if samples == []:
+                        self.reset()
+                        raise StopIteration
+                    else:
+                        return samples
+                tokens = line.decode(self.encoding).strip().split()
                 if len(tokens) > self.max_length:
                     continue
                 samples.append(tokens)
                 if len(samples) >= self.batchsize:
                     break
         return samples
-    
