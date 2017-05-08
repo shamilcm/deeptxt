@@ -1,18 +1,15 @@
 from __future__ import absolute_import
 
-
 ## read dictionary file and prepare vocabulary
 class VocabManager:
-    """
-    Initialize the vocabulary manager object.
-    
-    #Arguments
-        vocab_path: path to the vocabulary file, one token per line, sorted based on count (descending).
-        vocab_size: number of tokens in the vocabulary to retain
-        encoding: encoding to use while reading the file (default: utf-8)
-    """
-
     def __init__(self, vocab_path, vocab_size, encoding='utf-8'):
+        """
+        Initialize the vocabulary manager object.
+
+        :param vocab_path: path to the vocabulary file, one token per line, sorted based on count (descending).
+        :param vocab_size: number of tokens in the vocabulary to retain
+        :param encoding: encoding to use while reading the file (default: utf-8)
+        """
         # Setting the instance variables
         self.vocab_path = vocab_path
         self.vocab_size = vocab_size + 2  # +2 for <unk> and </s> 
