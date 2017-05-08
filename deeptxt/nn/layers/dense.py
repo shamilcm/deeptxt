@@ -55,4 +55,4 @@ class Dense(Layer):
         return self._output
     
     def outputs():
-        return self._output        
+        return self._output
