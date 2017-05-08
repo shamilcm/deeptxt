@@ -8,7 +8,7 @@ from ..initializers import Initializer
 
 class Adadelta(Optimizer):
     
-    def __init__(self, learning_rate=None, decay_rate=0.95, epsilon=1e-6):
+    def __init__(self, learning_rate=None, decay_factor=0.95, epsilon=1e-6):
         self.learning_rate = None  # does not use the learning rate parameters
         self.decay_factor = decay_factor  ## rho for computing decaying average
         self.epsilon = epsilon
