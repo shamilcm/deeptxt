@@ -28,8 +28,5 @@ class Initializer:
         return np.zeros(size).astype(Initializer.dtype)
     
     @staticmethod
-    def prepare_sharedvars(init_vals_dict):
-        sharedvars_dict = OrderedDict()
-        for name, value in init_vals_dict.iteritems():
-            sharedvars_dict[name] = theano.shared(value=value, name=name)
-        return sharedvars_dict
+    def scalar(constant=0):
+        return eval('np.' + Initializer.dtype)(constant)
