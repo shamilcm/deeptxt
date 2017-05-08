@@ -16,7 +16,7 @@ class RMSProp(Optimizer):
     def minimize(self, model):
         grads = [theano.shared(name='%s_grad' % param_name, value=Initializer.zeros(param.get_value().shape))
                                  for param_name, param in model.params().iteritems()]
-        grad_decayavg_sqrsums = [theano.shared(name='%s_grad' % param_name, value=Initializer.zeros(param.get_value().shape))
+        grad_decayavg_sqrsums = [theano.shared(name='%s_grad_sqrsums' % param_name, value=Initializer.zeros(param.get_value().shape))
                                  for param_name, param in model.params().iteritems()]
         
         ## Forward pass - loss and gradient calculation

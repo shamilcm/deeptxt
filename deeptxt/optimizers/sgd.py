@@ -10,7 +10,7 @@ class SGD(Optimizer):
     """
     Stochastic Gradient Descent Optimizer
 
-    Implementation of the SGD optimization algorithms
+    Implementation of the SGD optimization algorithm
 
      # Arguments
         learning_rate: the learning_rate for the optimizer

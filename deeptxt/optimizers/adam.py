@@ -4,12 +4,12 @@ import theano
 from theano import tensor as T
 
 from .optimizer import Optimizer
-from ..initializers import Initializer
+from ..initializers import Initializersrc
 
 class Adam(Optimizer):
-    def __init__(self, learning_rate, decay_rate_mean=0.9, decay_rate_variance=0.999, epsilon=1e-8 ):
-        self.beta1 = decay_rate_mean
-        self.beta2 = decay_rate_variance
+    def __init__(self, learning_rate, decay_factor_mean=0.9, decay_factor_variance=0.999, epsilon=1e-8 ):
+        self.beta1 = decay_factor_mean
+        self.beta2 = decay_factor_variance
         self.learning_rate = learning_rate
         self.epsilon = epsilon
         
