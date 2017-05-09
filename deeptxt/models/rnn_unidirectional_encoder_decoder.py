@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 from .model import Model
 from ..nn.layers.embeddings import Embeddings
-from ..nn.layers.gru import GRU
+from ..nn.layers.gru import GRU, ConditionalGRU
 from ..nn.layers.dense import Dense
 from ..nn.activations import Activation
 
@@ -36,7 +36,7 @@ class RNNUnidirectionalEncDec(Model):
         self._params.update(self.encoder_embeddings.params())
         
         # Decoder embeddings
-        self.decoder_embeddings = Embeddings('decoder_emb', self.hyperparams.decoder_vocab_size, self.hyperparams.decoder_emb_dim)
+        self.decoder_embeddings = Embeddings('decoder_emb', self.hyperparams.decoder_vocab_size, self.hyperparams.decoder_emb_dim, add_bos=True)
         self._params.update(self.decoder_embeddings.params())
         
         
@@ -95,11 +95,12 @@ class RNNUnidirectionalEncDec(Model):
         
         # get source word embeddings
         enc_emb = self.encoder_embeddings.Emb[self.x.flatten()]
+        # dim(x) = timesteps x samples
         enc_emb = enc_emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams.encoder_emb_dim])
         
         # get decoder init state
         encoder_outputs = self.encoder_rnn_layer_l2r.build(enc_emb,  self.x_mask)[0] 
-        last_encoder_output = encoder_outputs[-1]
+        last_encoder_output = encoder_outputs[-1]  # This will be the context at every input step
         
         # transform encoder output to get decoder init
         decoder_init = self.decoder_init_transform.build(last_encoder_output)
@@ -180,4 +181,3 @@ class RNNUnidirectionalEncDec(Model):
        
         return inp, inp_mask, target, target_mask
 
-    
