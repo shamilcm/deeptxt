@@ -15,7 +15,7 @@ from ..nn.activations import Activation
 
 class RNNLanguageModel(Model):
     
-   def __init__(self, hyperparams, vocab):
+    def __init__(self, hyperparams, vocab):
         self.hyperparams = hyperparams
         self.vocab = vocab
         # Preparing and Initializing Network Weights & Biases
@@ -23,9 +23,9 @@ class RNNLanguageModel(Model):
         
     # TODO: Loading and storing params
     def setup(self):
-        """
-        Setup the shared variables and model components
-        """
+        '''
+            Setup the shared variables and model components
+        '''
         self._params = OrderedDict()
         self.embeddings = Embeddings('Emb', self.hyperparams.vocab_size, self.hyperparams.emb_dim)
         self._params.update(self.embeddings.params())
@@ -130,5 +130,3 @@ class RNNLanguageModel(Model):
         inp_mask = np.array([[1.]*len(inp_instance[:max_length]) + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='float32').transpose()  
         inp = np.array(               [inp_instance[:max_length]  + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='int64').transpose()
         return inp, inp_mask
-
-    
