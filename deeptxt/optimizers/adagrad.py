@@ -4,7 +4,7 @@ import theano
 from theano import tensor as T
 
 from .optimizer import Optimizer
-from ..initializers import Initializer
+from ..nn.initializers import Initializer
 
 class Adagrad(Optimizer):
     """
