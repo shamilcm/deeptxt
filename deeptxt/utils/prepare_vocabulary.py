@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 from collections import Counter
 
-def prepare_vocabulary(dataset_path, out_vocab_path, encoding='utf-8'):
+def write_vocab(dataset_path, out_vocab_path, encoding='utf-8'):
     """
         Prepares the vocabulary file for a dataset. It contains all unique tokens of file with its count, 
         in descending order of token count.
@@ -28,6 +28,6 @@ if __name__ == "__main__":
     parser.add_argument('-o','--output-vocab-file', required=True, help='path to output vocabulary file')
     args = parser.parse_args()
 
-    prepare_vocabulary(args.input_file, args.output_vocab_file)
+    write_vocab(args.input_file, args.output_vocab_file)
 
         
