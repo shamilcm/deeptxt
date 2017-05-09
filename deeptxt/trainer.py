@@ -4,25 +4,12 @@ import numpy as np
 
 class Trainer:
     
-    def __init__(self, model, optimizer='sgd'):
+    def __init__(self, model, optimizer):
         """
         :param cachce_size: number of batches to cache
         """
-        if optimizer == 'sgd':
-            from .optimizers.sgd import SGD as Optimizer
-        elif optimizer == 'adagrad':
-            from .optimizers.adagrad import Adagrad as Optimizer
-        elif optimizer == 'rmsprop':
-            from .optimizers.rmsprop import RMSProp as Optimizer
-        elif optimizer == 'adadelta':
-            from .optimizers.adadelta import Adadelta as Optimizer
-        elif optimizer == 'adam':
-            from .optimizers.adam import Adam as Optimizer
-        else:
-            raise NotImplementedError
-
         self.model = model
-        self.forward, self.backward = Optimizer(learning_rate=train_params.learning_rate).minimize(model)
+        self.forward, self.backward = optimizer.minimize(model)
         #self.f_log_probs = theano.function(model.inputs(), model.loss())
 
     def update(self, minibatch, max_length=None):
