@@ -27,7 +27,7 @@ class RNNLanguageModel(Model):
             Setup the shared variables and model components
         '''
         self._params = OrderedDict()
-        self.embeddings = Embeddings('Emb', self.hyperparams.vocab_size, self.hyperparams.emb_dim)
+        self.embeddings = Embeddings('Emb', self.hyperparams.vocab_size, self.hyperparams.emb_dim, add_bos=True)
         self._params.update(self.embeddings.params())
         
         if self.hyperparams.rnn_cell == 'gru':
@@ -63,9 +63,6 @@ class RNNLanguageModel(Model):
         # TODO: remove embedding shifting?
         emb = self.embeddings.Emb[self.x.flatten()]
         emb = emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams.emb_dim])
-        emb_shifted = T.zeros_like(emb)
-        emb_shifted = T.set_subtensor(emb_shifted[1:], emb[:-1])
-        emb = emb_shifted
         
         # Building the RNN layer
         proj_h = self.rnn_layer.build(emb,  self.x_mask)[0]  # Only one output, hidden state
@@ -84,13 +81,14 @@ class RNNLanguageModel(Model):
         self._outputs = [self.probs]
 
     def build_loss(self):
-        # TODO: Make it better?
-        x_flat = self.x.flatten() #x_flat: a linear array with size #timesteps*#samples
+        # TODO: Remove the beg of sentence marker
+        x_flat = self.x[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
         x_flat_idx = T.arange(x_flat.shape[0]) * self.hyperparams.vocab_size + x_flat
                                     
         self._loss = -T.log(self.probs.flatten()[x_flat_idx])
-        self._loss = self._loss.reshape([self.x.shape[0], self.x.shape[1]])
-        self._loss = (self._loss * self.x_mask).sum(0)    
+        self._loss = self._loss.reshape([self.x.shape[0]-1, self.x.shape[1]])  # -1 is for removing beg of sent marker
+        self._loss = (self._loss * self.x_mask[1:]).sum(0)
+
 
     def loss(self):
         return self._loss.mean()
@@ -127,6 +125,6 @@ class RNNLanguageModel(Model):
         max_length = max_length + 1
         
         # preparing mask and input
-        inp_mask = np.array([[1.]*len(inp_instance[:max_length]) + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='float32').transpose()  
-        inp = np.array(               [inp_instance[:max_length]  + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='int64').transpose()
+        inp_mask = np.array([[1.] + [1.]*len(inp_instance[:max_length]) + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='float32').transpose()
+        inp = np.array([ [-1] + inp_instance[:max_length]  + [0.]*(max_length-len(inp_instance)) for inp_instance in inp], dtype='int64').transpose()
         return inp, inp_mask
