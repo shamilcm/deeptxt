@@ -24,13 +24,13 @@ class Embeddings(Layer):
         if add_bos == True:
             vocab_size = vocab_size + 1
         self.add_bos = add_bos
-        self.in_dim = vocab_size
-        self.out_dim = emb_dim
-        self.initialize_params(name, vocab_size, emb_dim, initializer)
+        self.vocab_size = vocab_size
+        self.emb_dim = emb_dim
+        self.initialize_params(name, initializer)
         
-    def initialize_params(self, name, vocab_size, emb_dim, initializer=Initializer.norm):
+    def initialize_params(self, name, initializer=Initializer.norm):
         self._params = OrderedDict()
-        embeddings = initializer(size=(vocab_size, emb_dim))
+        embeddings = initializer(size=(self.vocab_size, self.emb_dim))
         if self.add_bos:
             embeddings[-1] = 0.
         self.Emb = theano.shared(name=name, value=embeddings)
