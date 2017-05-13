@@ -1,10 +1,12 @@
 from __future__ import absolute_import
 
+import sys
+
 ## read dictionary file and prepare vocabulary
 class VocabManager:
     def __init__(self, vocab_path, vocab_size, encoding='utf-8'):
         """
-        Initialize the vocabulary manager object.
+        Initialize the vocabulary managerencoder_vocab object.
 
         :param vocab_path: path to the vocabulary file, one token per line, sorted based on count (descending).
         :param vocab_size: number of tokens in the vocabulary to retain
@@ -39,6 +41,9 @@ class VocabManager:
                 index += 1
                 if index >= self.vocab_size:
                     break
+
+        # if index is less than vocab size, set it to vocab_size
+        self.vocab_size = index
     
     def get_token(self, index):
         """
@@ -49,7 +54,9 @@ class VocabManager:
         try:
             return self.index_to_token_dict[index]
         except KeyError:
-            logger.error("Invalid index to vocabulary!")
+            # TODO: Uncomment this and do not return UNK
+            #print >> sys.stderr, "Invalid index to vocabulary:"  + str(index)
+            return self.unk
         
     def get_index(self, token):
         """
