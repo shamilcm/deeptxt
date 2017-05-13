@@ -27,3 +27,9 @@ class Model:
     @abc.abstractmethod
     def params(self):
         pass
+
+    def build_sampler(self):
+        pass
+
+    def sample(self, batch, num_samples):
+        return [{'OUTPUT':'sampling is not implemented for this model!'}]
