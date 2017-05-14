@@ -37,11 +37,11 @@ class RNNUnidirectionalEncDec(Model):
         self._params = OrderedDict()
         
         # Encoder embeddings
-        self.encoder_embeddings = Embeddings('encoder_emb', self.hyperparams.encoder_vocab_size, self.hyperparams.encoder_emb_dim)
+        self.encoder_embeddings = Embeddings('encoder_emb', self.hyperparams.encoder_vocab.vocab_size, self.hyperparams.encoder_emb_dim)
         self._params.update(self.encoder_embeddings.params())
         
         # Decoder embeddings
-        self.decoder_embeddings = Embeddings('decoder_emb', self.hyperparams.decoder_vocab_size, self.hyperparams.decoder_emb_dim, add_bos=True)
+        self.decoder_embeddings = Embeddings('decoder_emb', self.hyperparams.decoder_vocab.vocab_size, self.hyperparams.decoder_emb_dim, add_bos=True)
         self._params.update(self.decoder_embeddings.params())
         
         
@@ -89,7 +89,7 @@ class RNNUnidirectionalEncDec(Model):
         self.encoder_context_transform = Dense(name='encoder_context_transform', in_dim=self.hyperparams.encoder_units, num_units=self.hyperparams.decoder_emb_dim, activation=Activation.linear)
         self._params.update(self.encoder_context_transform.params())
         
-        self.word_probs_transform = Dense(name='word_probs_transform', in_dim=self.hyperparams.decoder_emb_dim, num_units=self.hyperparams.decoder_vocab_size, activation=Activation.linear)
+        self.word_probs_transform = Dense(name='word_probs_transform', in_dim=self.hyperparams.decoder_emb_dim, num_units=self.decoder_vocab.vocab_size, activation=Activation.linear)
         self._params.update(self.word_probs_transform.params())
 
         # DEBUG
@@ -153,7 +153,7 @@ class RNNUnidirectionalEncDec(Model):
         # TODO: Make it better?
         # y[0]  is bos, remove it to calculate loss
         y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
-        y_flat_idx = T.arange(y_flat.shape[0]) * self.hyperparams.decoder_vocab_size + y_flat
+        y_flat_idx = T.arange(y_flat.shape[0]) * self.decoder_vocab.vocab_size + y_flat
 
         self._loss = -T.log(self.probs.flatten()[y_flat_idx])
         self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])

@@ -27,7 +27,7 @@ class RNNLanguageModel(Model):
             Setup the shared variables and model components
         '''
         self._params = OrderedDict()
-        self.embeddings = Embeddings('Emb', self.hyperparams.vocab_size, self.hyperparams.emb_dim, add_bos=True)
+        self.embeddings = Embeddings('Emb', self.vocab.vocab_size, self.hyperparams.emb_dim, add_bos=True)
         self._params.update(self.embeddings.params())
         
         if self.hyperparams.rnn_cell == 'gru':
@@ -45,7 +45,7 @@ class RNNLanguageModel(Model):
         self.ff_logit_prev = Dense(name='ff_logit_prev', in_dim=self.hyperparams.emb_dim, num_units=self.hyperparams.emb_dim, activation=Activation.linear)
         self._params.update(self.ff_logit_prev.params())
 
-        self.ff_logit = Dense(name='ff_logit', in_dim=self.hyperparams.emb_dim, num_units=self.hyperparams.vocab_size, activation=Activation.linear)
+        self.ff_logit = Dense(name='ff_logit', in_dim=self.hyperparams.emb_dim, num_units=self.vocab.vocab_size, activation=Activation.linear)
         self._params.update(self.ff_logit.params())
         # DEBUG
         #for k, v in self._params.iteritems():
@@ -83,7 +83,7 @@ class RNNLanguageModel(Model):
     def build_loss(self):
         # TODO: Remove the beg of sentence marker
         x_flat = self.x[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
-        x_flat_idx = T.arange(x_flat.shape[0]) * self.hyperparams.vocab_size + x_flat
+        x_flat_idx = T.arange(x_flat.shape[0]) * self.vocab.vocab_size + x_flat
                                     
         self._loss = -T.log(self.probs.flatten()[x_flat_idx])
         self._loss = self._loss.reshape([self.x.shape[0]-1, self.x.shape[1]])  # -1 is for removing beg of sent marker
