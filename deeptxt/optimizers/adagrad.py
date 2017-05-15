@@ -17,8 +17,9 @@ class Adagrad(Optimizer):
         epsilon: to add a small value to denominator to avoid division by 0
     """
     
-    def __init__(self, learning_rate, epsilon=1e-4):
+    def __init__(self, learning_rate, epsilon=1e-4, **kwargs):
         # TODO: correct default epsilon?
+        super(Adagrad, self).__init__(**kwargs)
         self.learning_rate = learning_rate
         self.epsilon = epsilon
         
@@ -30,7 +31,7 @@ class Adagrad(Optimizer):
         grad_sqrsums = [theano.shared(name='%s_grad_sqrsums' % param_name, value=Initializer.zeros(param.get_value().shape))
                                  for param_name, param in model.params().iteritems()]
         # Forward pass - loss and gradient calculation
-        grad_exprs = T.grad(model.loss().mean(), wrt=model.params().values())
+        grad_exprs = self.get_gradients(model)
         grad_updates = [(grad, grad_expr) for grad, grad_expr in zip(grads, grad_exprs)]
         
         grad_sqrsum_updates = [(grad_sqrsum, grad_sqrsum + grad_expr ** 2 )
@@ -43,4 +44,3 @@ class Adagrad(Optimizer):
         self.backward = theano.function([], [], updates=param_updates)
         
         return (self.forward, self.backward)
-        
