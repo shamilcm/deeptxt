@@ -3,7 +3,7 @@ import abc, six
 
 @six.add_metaclass(abc.ABCMeta)
 class Model:
-    
+
     @abc.abstractmethod
     def setup(self):
         pass
@@ -33,3 +33,7 @@ class Model:
 
     def sample(self, batch, num_samples):
         return [{'OUTPUT':'sampling is not implemented for this model!'}]
+
+    # TODO: make this abstract
+    def load_params(self):
+        raise NotImplementedError
