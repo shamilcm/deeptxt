@@ -13,7 +13,7 @@ class Model:
         pass
     
     @abc.abstractmethod
-    def prepare_input(self):
+    def prepare_train_input(self):
         pass
     
     @abc.abstractmethod
@@ -23,9 +23,21 @@ class Model:
     @abc.abstractmethod
     def outputs(self):
         pass
+
+    @abc.abstractmethod
+    def targets(self):
+        pass
     
     @abc.abstractmethod
+    def predictions(self):
+        pass
+
+    @abc.abstractmethod
     def params(self):
+        pass
+
+    @abc.abstractmethod
+    def hyperparams(self):
         pass
 
     def build_sampler(self):
@@ -37,3 +49,4 @@ class Model:
     # TODO: make this abstract
     def load_params(self):
         raise NotImplementedError
+
