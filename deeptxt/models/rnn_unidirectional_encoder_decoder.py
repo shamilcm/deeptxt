@@ -176,7 +176,7 @@ class RNNUnidirectionalEncDec(Model):
         self.sampler = theano.function(sampler_input, sampler_output)
 
     def sample(self, batch, num_samples=5):
-        source, source_mask, target, target_mask = self.prepare_input(batch)
+        source, source_mask, target, target_mask = self.prepare_train_input(batch)
         num_samples = np.minimum(1, source.shape[1])
         # TODO: replace by random sampling:
         source = source[:,0:num_samples]
@@ -238,7 +238,7 @@ class RNNUnidirectionalEncDec(Model):
 
 
 
-    def prepare_input(self, batch, max_length=None):
+    def prepare_train_input(self, batch, max_length=None):
         # setting maxlen to length of longest sample
         max_length_input = max([len(sample[0]) for sample in batch]) 
         max_length_target = max([len(sample[1]) for sample in batch])
