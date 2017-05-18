@@ -18,7 +18,7 @@ class Optimizer:
             self.clip_value = kwargs['clip_value']
 
     @abc.abstractmethod
-    def minimize(self, model):
+    def minimize(self, model, loss_func):
         pass
 
     def get_gradients(self, model):
