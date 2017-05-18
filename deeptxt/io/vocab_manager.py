@@ -21,12 +21,12 @@ class VocabManager:
         # Setting end of symbol token
         self.eos = '</s>'.decode(encoding)
         self.token_to_index_dict[self.eos] = 0
-        self.index_to_token_dict[1] = self.eos
+        self.index_to_token_dict[0] = self.eos
         
         # Setting unknown token in dictionary
         self.unk = '<unk>'.decode(encoding)
         self.token_to_index_dict[self.unk] = 1
-        self.index_to_token_dict[0] = self.unk
+        self.index_to_token_dict[1] = self.unk
         
 
         # Loop through the vocabulary.
