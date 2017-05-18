@@ -99,7 +99,6 @@ else:
 ## Training 
 ############
 num_samples = 0
-updates = 0
 
 if config.train_params.optimizer == 'sgd':
     from deeptxt.optimizers.sgd import SGD as Optimizer
@@ -120,11 +119,22 @@ model.build()
 
 # Preparing trainer and validator objects
 logger.info('Building trainer')
-optimizer = Optimizer(learning_rate=config.train_params.learning_rate)
+kwargs_optimizer = dict()
+if hasattr(config.train_params, 'clip_norm'):
+    kwargs_optimizer['clip_norm'] = config.train_params.clip_norm
+if hasattr(config.train_params, 'clip_value'):
+    kwargs_optimizer['clip_value'] = config.train_params.clip_value
+optimizer = Optimizer(learning_rate=config.train_params.learning_rate, **kwargs_optimizer)
 trainer = Trainer(model=model, optimizer=optimizer)
 
 logger.info('Building validator')
 validator = Tester(data_reader=validation_data, model=model)
+
+if hasattr(config.train_params, 'init_model'):
+    if os.path.exists(config.train_params.init_model):
+        trainer.load_model(config.train_params.init_model)
+    else:
+        logger.error('Invalid model path: %s' % config.train_params.init_model)
 
 for epoch in xrange(config.train_params.num_epochs):
     
@@ -140,38 +150,37 @@ for epoch in xrange(config.train_params.num_epochs):
         train_loss = trainer.update(minibatch)
         # Check if loss is NaN or infitnity
         if np.isnan(train_loss) or np.isinf(train_loss):
-            logger.error("NaN detected at Update:" + str(updates))
+            logger.error("NaN detected at Update:" + str(trainer.num_updates))
         
         end_time = time.time() 
         
         # Incrementing updates and adding loss
-        updates += 1
         train_loss_sum +=  train_loss
         train_batches += 1
         num_samples += len(minibatch)
         
         # displaying
-        if config.train_params.display_freq > 0 and updates % config.train_params.display_freq == 0:
-            trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches, updates=updates, time_per_update = end_time-start_time)
+        if config.train_params.display_freq > 0 and trainer.num_updates % config.train_params.display_freq == 0:
+            trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches, time_per_update = end_time-start_time)
         # validation
-        if config.train_params.validation_freq > 0 and updates % config.train_params.validation_freq == 0:
+        if config.train_params.validation_freq > 0 and trainer.num_updates % config.train_params.validation_freq == 0:
             validator.log_validation_info()
         # saving
-        if config.train_params.save_freq > 0 and updates % config.train_params.save_freq == 0:
-            savepath = args.output_dir + '/model_iter' + str(updates) + '.npz'
-            logger.info("Saving model:" + savepath)
-            trainer.save(savepath, updates, validator)
+        if config.train_params.save_freq > 0 and trainer.num_updates % config.train_params.save_freq == 0:
+            model_path = args.output_dir + '/model_iter' + str(trainer.num_updates) + '.npz'
+            logger.info("Saving model:" + model_path)
+            trainer.save_model(modelpath, trainer.num_updates, validator)
         # sampling
-        if config.train_params.sampling_freq > 0 and updates % config.train_params.sampling_freq == 0:
+        if config.train_params.sampling_freq > 0 and trainer.num_updates % config.train_params.sampling_freq == 0:
             trainer.sampling(minibatch, num_samples=1)
     
     # dispalying
-    trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches, updates=updates)
+    trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches)
     # validation
     validator.log_validation_info()
     logger.info("Epoch %d completed. %d samples seen. Saving." %(epoch, num_samples))
 
     # saving
-    trainer.save(args.output_dir + '/model_epoch' + str(epoch) + '.npz', updates, validator)
+    trainer.save_model(args.output_dir + '/model_epoch' + str(epoch) + '.npz', validator)
 
 
