@@ -16,10 +16,13 @@ from ..nn.activations import Activation
 class RNNLanguageModel(Model):
     
     def __init__(self, hyperparams, vocab):
-        self.hyperparams = hyperparams
+        self._hyperparams = hyperparams
         self.vocab = vocab
         # Preparing and Initializing Network Weights & Biases
         self.setup()
+
+    def hyperparams(self):
+        return self._hyperparams
         
     # TODO: Loading and storing params
     def setup(self):
@@ -27,25 +30,25 @@ class RNNLanguageModel(Model):
             Setup the shared variables and model components
         '''
         self._params = OrderedDict()
-        self.embeddings = Embeddings('Emb', self.vocab.vocab_size, self.hyperparams.emb_dim, add_bos=True)
+        self.embeddings = Embeddings('Emb', self.vocab.vocab_size, self.hyperparams().emb_dim, add_bos=True)
         self._params.update(self.embeddings.params())
         
-        if self.hyperparams.rnn_cell == 'gru':
-            self.rnn_layer = GRU(name='gru0', in_dim=self.hyperparams.emb_dim, num_units=self.hyperparams.num_units)
+        if self.hyperparams().rnn_cell == 'gru':
+            self.rnn_layer = GRU(name='gru0', in_dim=self.hyperparams().emb_dim, num_units=self.hyperparams().num_units)
             self._params.update(self.rnn_layer.params())
-        elif self.hyperparams.rnn_cell == 'lstm':
+        elif self.hyperparams().rnn_cell == 'lstm':
             raise NotImplementedError
         else:
-            logger.error("Invalid RNN Cell Type:" + self.hyperparams.rnn_cell)
+            logger.error("Invalid RNN Cell Type:" + self.hyperparams().rnn_cell)
         
         # TODO : Cleanup this part of code!
-        self.ff_logit_rnn = Dense(name='ff_logit_rnn', in_dim=self.hyperparams.num_units, num_units=self.hyperparams.emb_dim, activation=Activation.linear)
+        self.ff_logit_rnn = Dense(name='ff_logit_rnn', in_dim=self.hyperparams().num_units, num_units=self.hyperparams().emb_dim, activation=Activation.linear)
         self._params.update(self.ff_logit_rnn.params())
         
-        self.ff_logit_prev = Dense(name='ff_logit_prev', in_dim=self.hyperparams.emb_dim, num_units=self.hyperparams.emb_dim, activation=Activation.linear)
+        self.ff_logit_prev = Dense(name='ff_logit_prev', in_dim=self.hyperparams().emb_dim, num_units=self.hyperparams().emb_dim, activation=Activation.linear)
         self._params.update(self.ff_logit_prev.params())
 
-        self.ff_logit = Dense(name='ff_logit', in_dim=self.hyperparams.emb_dim, num_units=self.vocab.vocab_size, activation=Activation.linear)
+        self.ff_logit = Dense(name='ff_logit', in_dim=self.hyperparams().emb_dim, num_units=self.vocab.vocab_size, activation=Activation.linear)
         self._params.update(self.ff_logit.params())
         # DEBUG
         #for k, v in self._params.iteritems():
@@ -62,7 +65,7 @@ class RNNLanguageModel(Model):
         # input
         # TODO: remove embedding shifting?
         emb = self.embeddings.Emb[self.x.flatten()]
-        emb = emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams.emb_dim])
+        emb = emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams().emb_dim])
         
         # Building the RNN layer
         proj_h = self.rnn_layer.build(emb,  self.x_mask)[0]  # Only one output, hidden state
@@ -89,6 +92,11 @@ class RNNLanguageModel(Model):
         self._loss = self._loss.reshape([self.x.shape[0]-1, self.x.shape[1]])  # -1 is for removing beg of sent marker
         self._loss = (self._loss * self.x_mask[1:]).sum(0)
 
+    def predictions(self):
+        pass
+
+    def targets(self):
+        pass
 
     def loss(self):
         return self._loss.mean()
@@ -105,8 +113,15 @@ class RNNLanguageModel(Model):
     
     def params(self):
         return self._params
-    
-    def prepare_input(self, batch, max_length=None):
+
+    def load_params(self, params):
+        for param_name in self.params():
+            try:
+                self._params[param_name].set_value(params[param_name])
+            except KeyError:
+                logger.error('Value for the model parameter %s is not found!' % param_name)
+
+    def prepare_train_input(self, batch, max_length=None):
         # setting maxlen to length of longest sample
         if max_length is not None:
             # select the minimum of the max_length, or the length of the longest sample subject to max_length constraint
