@@ -9,6 +9,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config-file', dest='config_file', required=True, type=str, help='Input configuration file')
 parser.add_argument('-o', '--output-directory', dest='output_dir', required=True, type=str, help='Path to output directory')
 parser.add_argument('-d', '--device', dest='device', default='cpu', help='Theano device')
+parser.add_argument('--overwrite', dest='overwrite', action='store_true', help='Enable this flag for overwriting the same model file after every epoch')
+parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Enable this flag for debugging')
 args = parser.parse_args()
 # TODO: implement training parameters here
 
@@ -21,7 +23,7 @@ else:
     pass
 
 # setting the logger
-from deeptxt.utils import logutils 
+from deeptxt.utils import logutils
 logger = logging.getLogger(__name__)
 logutils.set_logger(args.output_dir)
 
@@ -33,7 +35,7 @@ if args.device == 'cpu':
 theano_config.configure(device=args.device, dtype='float32')
 
 from deeptxt.trainer import Trainer
-from deeptxt.tester import Tester
+from deeptxt.evaluator import Evaluator
 from deeptxt.io.vocab_manager import VocabManager
 from deeptxt.utils.prepare_vocabulary import write_vocab
 
@@ -62,7 +64,7 @@ if config.model == 'rnnlm':
     from deeptxt.io.readers.text_reader import TextReader
     train_data = TextReader(dataset_path=config.train_params.train_data, batchsize=config.train_params.batchsize, max_length=config.train_params.max_length)
     validation_data = TextReader(dataset_path=config.train_params.validation_data, batchsize=config.train_params.validation_batchsize, max_length=config.train_params.max_length)
-    
+
     if not hasattr(config.train_params, 'vocab_path'):
         setattr(config.train_params, 'vocab_path', args.output_dir + '/vocab.txt')
         write_vocab(config.train_params.train_data, config.train_params.vocab_path)
@@ -73,12 +75,12 @@ if config.model == 'rnnlm':
 # Seq2Seq Models
 elif config.model == 'basic_seq2seq':
     from deeptxt.models.rnn_encoder_decoder import RNNEncoderDecoder as EncDec
-    from deeptxt.io.readers.parallel_text_reader import ParallelTextReader   
-    train_data = ParallelTextReader(source_dataset_path=config.train_params.source_train_data, 
+    from deeptxt.io.readers.parallel_text_reader import ParallelTextReader
+    train_data = ParallelTextReader(source_dataset_path=config.train_params.source_train_data,
                                target_dataset_path=config.train_params.target_train_data,
                               batchsize=config.train_params.batchsize, source_max_length=config.train_params.max_length, target_max_length=config.train_params.max_length)
     validation_data = ParallelTextReader(source_dataset_path=config.train_params.source_validation_data, target_dataset_path=config.train_params.target_validation_data, batchsize=config.train_params.validation_batchsize, source_max_length=config.train_params.max_length, target_max_length=config.train_params.max_length)
-    
+
     if not hasattr(config.train_params, 'source_vocab_path'):
         setattr(config.train_params, 'source_vocab_path', args.output_dir + '/source_vocab.txt')
         write_vocab(config.train_params.source_train_data, config.train_params.source_vocab_path)
@@ -86,7 +88,7 @@ elif config.model == 'basic_seq2seq':
     if not hasattr(config.train_params, 'target_vocab_path'):
         setattr(config.train_params, 'target_vocab_path', args.output_dir + '/target_vocab.txt')
         write_vocab(config.train_params.target_train_data, config.train_params.target_vocab_path)
-    
+
     source_vocab = VocabManager(config.train_params.source_vocab_path, config.network_params.encoder_vocab_size)
     target_vocab = VocabManager(config.train_params.target_vocab_path, config.network_params.decoder_vocab_size)
     model = EncDec(hyperparams=config.network_params, encoder_vocab=source_vocab, decoder_vocab=target_vocab, encode_bidirectional=True, use_attention=True)
@@ -96,10 +98,12 @@ else:
 
 
 ############
-## Training 
+## Training
 ############
 num_samples = 0
 
+
+### Setting the optimizer
 if config.train_params.optimizer == 'sgd':
     from deeptxt.optimizers.sgd import SGD as Optimizer
 elif config.train_params.optimizer == 'adagrad':
@@ -113,11 +117,12 @@ elif config.train_params.optimizer == 'adam':
 else:
     raise NotImplementedError
 
-# Building model
+### Building model
 logger.info('Building model graph')
 model.build()
 
-# Preparing trainer and validator objects
+
+### Preparing trainer and validator objects
 logger.info('Building trainer')
 kwargs_optimizer = dict()
 if hasattr(config.train_params, 'clip_norm'):
@@ -128,37 +133,38 @@ optimizer = Optimizer(learning_rate=config.train_params.learning_rate, **kwargs_
 trainer = Trainer(model=model, optimizer=optimizer)
 
 logger.info('Building validator')
-validator = Tester(data_reader=validation_data, model=model)
+validator = Evaluator(data_reader=validation_data, model=model)
 
 if hasattr(config.train_params, 'init_model'):
+    logger.info('Initializing parameters from model:' + config.train_params.init_model)
     if os.path.exists(config.train_params.init_model):
         trainer.load_model(config.train_params.init_model)
     else:
         logger.error('Invalid model path: %s' % config.train_params.init_model)
 
 for epoch in xrange(config.train_params.num_epochs):
-    
+
     num_samples = 0
     train_loss_sum = 0
     train_batches = 0
-    
+
     for minibatch in train_data:
-        
+
         start_time = time.time()
 
         # Update the paramaters after computing loss
-        train_loss = trainer.update(minibatch)
+        train_loss = trainer.update(minibatch, verbose=args.verbose)
         # Check if loss is NaN or infitnity
         if np.isnan(train_loss) or np.isinf(train_loss):
             logger.error("NaN detected at Update:" + str(trainer.num_updates))
-        
-        end_time = time.time() 
-        
+
+        end_time = time.time()
+
         # Incrementing updates and adding loss
         train_loss_sum +=  train_loss
         train_batches += 1
         num_samples += len(minibatch)
-        
+
         # displaying
         if config.train_params.display_freq > 0 and trainer.num_updates % config.train_params.display_freq == 0:
             trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches, time_per_update = end_time-start_time)
@@ -173,14 +179,17 @@ for epoch in xrange(config.train_params.num_epochs):
         # sampling
         if config.train_params.sampling_freq > 0 and trainer.num_updates % config.train_params.sampling_freq == 0:
             trainer.sampling(minibatch, num_samples=1)
-    
+
     # dispalying
     trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches)
     # validation
     validator.log_validation_info()
     logger.info("Epoch %d completed. %d samples seen. Saving." %(epoch, num_samples))
 
+    if args.overwrite == True:
     # saving
-    trainer.save_model(args.output_dir + '/model_epoch' + str(epoch) + '.npz', validator)
+        trainer.save_model(args.output_dir + '/model_epoch' + str(epoch) + '.npz', validator)
+    else:
+        trainer.save_model(args.output_dir + '/model' + str(epoch) + '.npz', validator)
 
 
