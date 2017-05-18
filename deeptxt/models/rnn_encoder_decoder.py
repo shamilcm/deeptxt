@@ -12,11 +12,15 @@ from ..nn.layers.embeddings import Embeddings
 from ..nn.layers.dense import Dense
 from ..nn.activations import Activation
 
+import logging
+from ..utils import logutils 
+logger = logging.getLogger(__name__)
+
 
 class RNNEncoderDecoder(Model):
 
-    def __init__(self, hyperparams, encoder_vocab, decoder_vocab, use_attention=False, encode_bidirectional=False):
-        self.hyperparams = hyperparams
+    def __init__(self, hyperparams, encoder_vocab, decoder_vocab, use_attention=False, encode_bidirectional=False, **kwargs):
+        self._hyperparams = hyperparams
         self.encoder_vocab = encoder_vocab
         self.decoder_vocab = decoder_vocab
         self.use_attention = use_attention
@@ -30,6 +34,10 @@ class RNNEncoderDecoder(Model):
         # Preparing and Initializing Network Weights & Biases
         self.setup()
 
+    def hyperparams(self):
+        return self._hyperparams
+
+
     # TODO: Loading and storing params
     def setup(self):
         """
@@ -38,66 +46,66 @@ class RNNEncoderDecoder(Model):
         self._params = OrderedDict()
 
         # Encoder embeddings
-        self.encoder_embeddings = Embeddings('encoder_emb', self.encoder_vocab.vocab_size, self.hyperparams.encoder_emb_dim)
+        self.encoder_embeddings = Embeddings('encoder_emb', self.encoder_vocab.vocab_size, self.hyperparams().encoder_emb_dim)
         self._params.update(self.encoder_embeddings.params())
 
         # Decoder embeddings
-        self.decoder_embeddings = Embeddings('decoder_emb', self.decoder_vocab.vocab_size, self.hyperparams.decoder_emb_dim, add_bos=True)
+        self.decoder_embeddings = Embeddings('decoder_emb', self.decoder_vocab.vocab_size, self.hyperparams().decoder_emb_dim, add_bos=True)
         self._params.update(self.decoder_embeddings.params())
 
         ################
         # Encoder Layer
         ################
         # TODO: make a different class
-        if self.hyperparams.rnn_cell == 'gru':
+        if self.hyperparams().rnn_cell == 'gru':
             from ..nn.layers.gru import GRU as RNN
-        elif self.hyperparams.rnn_cell == 'lstm':
+        elif self.hyperparams().rnn_cell == 'lstm':
             raise NotImplementedError
         else:
-            logger.error("Invalid RNN Cell Type:" + self.hyperparams.rnn_cell)
+            logger.error("Invalid RNN Cell Type:" + self.hyperparams().rnn_cell)
 
-        self.encoder_rnn_layer_l2r = RNN(name='encoder_' + self.hyperparams.rnn_cell + '0_l2r', in_dim=self.hyperparams.encoder_emb_dim, num_units=self.hyperparams.encoder_units)
+        self.encoder_rnn_layer_l2r = RNN(name='encoder_' + self.hyperparams().rnn_cell + '0_l2r', in_dim=self.hyperparams().encoder_emb_dim, num_units=self.hyperparams().encoder_units)
         self._params.update(self.encoder_rnn_layer_l2r.params())
-        encoding_dim = self.hyperparams.encoder_units
+        encoding_dim = self.hyperparams().encoder_units
 
         if self.encode_bidirectional == True:
-            self.encoder_rnn_layer_r2l = RNN(name='encoder_' + self.hyperparams.rnn_cell + '0_r2l', in_dim=self.hyperparams.encoder_emb_dim, num_units=self.hyperparams.encoder_units)
+            self.encoder_rnn_layer_r2l = RNN(name='encoder_' + self.hyperparams().rnn_cell + '0_r2l', in_dim=self.hyperparams().encoder_emb_dim, num_units=self.hyperparams().encoder_units)
             self._params.update(self.encoder_rnn_layer_r2l.params())
-            encoding_dim = self.hyperparams.encoder_units * 2
+            encoding_dim = self.hyperparams().encoder_units * 2
 
         # Transform to prepare init state of decoder
-        self.decoder_init_transform = Dense(name='decoder_init_transform', in_dim=encoding_dim, num_units=self.hyperparams.decoder_units, activation=Activation.tanh)
+        self.decoder_init_transform = Dense(name='decoder_init_transform', in_dim=encoding_dim, num_units=self.hyperparams().decoder_units, activation=Activation.tanh)
         self._params.update(self.decoder_init_transform.params())
 
         ################
         # Decoder Layer
         ###############
         # TODO: make a different class
-        if self.hyperparams.rnn_cell == 'gru':
+        if self.hyperparams().rnn_cell == 'gru':
             if self.use_attention:
                 from ..nn.layers.gru import ConditionalGRU_Attn as ConditionalRNN
             else:
                 from ..nn.layers.gru import ConditionalGRU as ConditionalRNN
-        elif self.hyperparams.rnn_cell == 'lstm':
+        elif self.hyperparams().rnn_cell == 'lstm':
             raise NotImplementedError
         else:
-            logger.error("Invalid RNN Cell Type:" + self.hyperparams.rnn_cell)
+            logger.error("Invalid RNN Cell Type:" + self.hyperparams().rnn_cell)
 
-        self.decoder_rnn_layer = ConditionalRNN(name='decoder_' + self.hyperparams.rnn_cell + '0', in_dim=self.hyperparams.decoder_emb_dim, num_units=self.hyperparams.decoder_units, context_dim=encoding_dim)
+        self.decoder_rnn_layer = ConditionalRNN(name='decoder_' + self.hyperparams().rnn_cell + '0', in_dim=self.hyperparams().decoder_emb_dim, num_units=self.hyperparams().decoder_units, context_dim=encoding_dim)
         self._params.update(self.decoder_rnn_layer.params())
 
         # Read out words
 
-        self.decoder_state_transform = Dense(name='decoder_state_transform', in_dim=self.hyperparams.decoder_units, num_units=self.hyperparams.decoder_emb_dim, activation=Activation.linear)
+        self.decoder_state_transform = Dense(name='decoder_state_transform', in_dim=self.hyperparams().decoder_units, num_units=self.hyperparams().decoder_emb_dim, activation=Activation.linear)
         self._params.update(self.decoder_state_transform.params())
 
-        self.prev_emb_transform = Dense(name='prev_emb_transform', in_dim=self.hyperparams.decoder_emb_dim, num_units=self.hyperparams.decoder_emb_dim, activation=Activation.linear)
+        self.prev_emb_transform = Dense(name='prev_emb_transform', in_dim=self.hyperparams().decoder_emb_dim, num_units=self.hyperparams().decoder_emb_dim, activation=Activation.linear)
         self._params.update(self.prev_emb_transform.params())
 
-        self.encoder_context_transform = Dense(name='encoder_context_transform', in_dim=encoding_dim, num_units=self.hyperparams.decoder_emb_dim, activation=Activation.linear)
+        self.encoder_context_transform = Dense(name='encoder_context_transform', in_dim=encoding_dim, num_units=self.hyperparams().decoder_emb_dim, activation=Activation.linear)
         self._params.update(self.encoder_context_transform.params())
 
-        self.word_probs_transform = Dense(name='word_probs_transform', in_dim=self.hyperparams.decoder_emb_dim, num_units=self.decoder_vocab.vocab_size, activation=Activation.linear)
+        self.word_probs_transform = Dense(name='word_probs_transform', in_dim=self.hyperparams().decoder_emb_dim, num_units=self.decoder_vocab.vocab_size, activation=Activation.linear)
         self._params.update(self.word_probs_transform.params())
 
         # DEBUG
@@ -119,7 +127,7 @@ class RNNEncoderDecoder(Model):
         # get source word embeddings
         encoder_emb = self.encoder_embeddings.Emb[self.x.flatten()]
         # dim(x) = timesteps x samples
-        encoder_emb = encoder_emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams.encoder_emb_dim])
+        encoder_emb = encoder_emb.reshape([self.x.shape[0], self.x.shape[1], self.hyperparams().encoder_emb_dim])
 
         # get decoder init state
         self.encoder_outputs = self.encoder_rnn_layer_l2r.build(encoder_emb,  self.x_mask)[0]
@@ -128,7 +136,7 @@ class RNNEncoderDecoder(Model):
             #x_rev = self.x[::-1]
             #x_mask_rev = self.x_mask[::-1]
             #encoder_emb_rev = self.encoder_embeddings.Emb[x_rev.flatten()e
-            #encoder_emb_rev = encoder_emb_rev.reshape([x_rev.shape[0], x_rev.shape[1], self.hyperparams.encoder_emb_dim])
+            #encoder_emb_rev = encoder_emb_rev.reshape([x_rev.shape[0], x_rev.shape[1], self.hyperparams().encoder_emb_dim])
             encoder_emb_rev = encoder_emb[::-1]
             encoder_outputs_rev = self.encoder_rnn_layer_r2l.build(encoder_emb_rev,  self.x_mask[::-1])[0]
             self.encoder_outputs = T.concatenate([self.encoder_outputs, encoder_outputs_rev[::-1]], axis=self.encoder_outputs.ndim - 1)
@@ -147,7 +155,7 @@ class RNNEncoderDecoder(Model):
         # input
         # TODO: remove embedding shifting?
         dec_emb = self.decoder_embeddings.Emb[self.y.flatten()]
-        dec_emb = dec_emb.reshape([self.y.shape[0], self.y.shape[1], self.hyperparams.decoder_emb_dim])
+        dec_emb = dec_emb.reshape([self.y.shape[0], self.y.shape[1], self.hyperparams().decoder_emb_dim])
 
         # Building the RNN layer
         if self.use_attention == True:
@@ -171,24 +179,73 @@ class RNNEncoderDecoder(Model):
         logit_enc_context = self.encoder_context_transform.build(context) # dim(context) = #timesteps x #samples x context_dim
         logit = self.word_probs_transform.build(Activation.tanh(logit_decoder_rnn + logit_prev_emb + logit_enc_context)) # dim(logit) = #timesteps x #samples x #vocab_size
 
+        # removing the extra timestep due to the adding of <bos> for target 
+        #logit = logit[:-1]
+        # to make it the same size as the reference input, removing an extra timestep
+        # that occured because of adding <bos> in the beginning
+        #self.logit_2d = logit.reshape([(logit.shape[0])*logit.shape[1], logit.shape[2]])
         # reshaping logit as (#timesteps*#samples) x vocab_size and performing softmax across vocabulary
-        self.probs = T.nnet.softmax(logit.reshape([logit.shape[0]*logit.shape[1], logit.shape[2]])) #dim(probs) = (#timesteps*#samples) x vocab_size
+        self.probs = T.nnet.softmax(logit.reshape([logit.shape[0]*logit.shape[1], logit.shape[2]])) 
+        #self.probs = T.nnet.softmax(self.logit_2d) #dim(probs) = (#timesteps*#samples) x vocab_size
+        
+        #self.probs = self.probs.reshape([logit.shape[0], logit.shape[1], logit.shape[2]])
+        
+
+
+
+        # required for test time
+        self._outputs = [self.probs]
+
+        # Required for the loss function
+        self._predictions = self.probs.reshape([logit.shape[0], logit.shape[1], logit.shape[2]])[:-1]  # remove last row because of extra <bos> adding oen additional timestep
+        self._targets = self.y[1:] 
+        self._targets_mask = self.y_mask[1:]
+
         #Building loss function
         self.build_loss()
-
-
-        self._outputs = [self.probs]
 
 
     def build_loss(self):
         # TODO: Make it better?
         # y[0]  is bos, remove it to calculate loss
-        y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
-        y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
+        #y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
+        #y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
 
-        self._loss = -T.log(self.probs.flatten()[y_flat_idx])
-        self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
-        self._loss = (self._loss * self.y_mask[1:]).sum(0)
+        #self._loss = -T.log(self.probs.flatten()[y_flat_idx])
+        #self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
+        #self._loss = (self._loss * self.y_mask[1:]).sum(0)
+        # self._loss = self._loss.mean()
+
+        ### Method 2
+        #self._loss = T.nnet.categorical_crossentropy(self.probs, y_flat)
+        
+        ### Method 3
+        #y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
+        #y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
+        #log_z = T.log(T.exp(self.logit_2d).sum(1))
+        #self._loss = log_z - self.logit_2d.flatten()[y_flat_idx]
+        #self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
+        #self._loss = (self._loss * self.y_mask[1:]).sum(0)
+        # self._loss = self._loss.mean()
+        from ..objectives.losses import categorical_crossentropy
+        targets, targets_mask = self.targets()
+        self._loss = categorical_crossentropy(targets=targets, predictions=self.predictions(), mask=targets_mask)
+        
+        ## Section to remove after debugging
+        try:
+            self.debug = self._loss[1]
+            self._loss = self._loss[0]
+        except:
+            pass
+
+        #y_flat = targets.flatten()
+        #y_flat_idx = T.arange(y_flat.shape[0]) * self._predictions.shape[-1] + y_flat
+
+        #self._loss = -T.log(self._predictions.flatten()[y_flat_idx])
+        #self._loss = self._loss.reshape([targets.shape[0], targets.shape[1]])
+        #self._loss = (self._loss * targets_mask).sum(0)
+        #self._loss = self._loss.mean()       
+
 
     def build_sampler(self, sampling=True):
         initializer_input = [self.x, self.x_mask]
@@ -210,7 +267,7 @@ class RNNEncoderDecoder(Model):
         self.sampler = theano.function(sampler_input, sampler_output)
 
     def sample(self, batch, num_samples=5):
-        source, source_mask, target, target_mask = self.prepare_input(batch)
+        source, source_mask, target, target_mask = self.prepare_train_input(batch)
         num_samples = np.minimum(1, source.shape[1])
         # TODO: replace by random sampling:
         source = source[:,0:num_samples]
@@ -255,7 +312,13 @@ class RNNEncoderDecoder(Model):
         return hypothesis
 
     def loss(self):
-        return self._loss.mean()
+        return self._loss
+
+    def predictions(self):
+        return self._predictions
+
+    def targets(self):
+        return self._targets, self._targets_mask
 
     def log_probs(self):
         # TODO: Make it better?
@@ -270,9 +333,14 @@ class RNNEncoderDecoder(Model):
     def params(self):
         return self._params
 
+    def load_params(self, params):
+        for param_name in self.params():
+            try:
+                self._params[param_name].set_value(params[param_name])
+            except KeyError:
+                logger.error('Value for the model parameter %s is not found!' % param_name)
 
-
-    def prepare_input(self, batch, max_length=None):
+    def prepare_train_input(self, batch, max_length=None):
         # setting maxlen to length of longest sample
         max_length_input = max([len(sample[0]) for sample in batch])
         max_length_target = max([len(sample[1]) for sample in batch])
