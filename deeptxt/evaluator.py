@@ -5,7 +5,7 @@ from .utils import logutils
 logger = logging.getLogger(__name__)
 
 
-class Tester:
+class Evaluator:
     def __init__(self, data_reader, model, metric=None, save_history=False):
         self.model = model
         self.f_loss = theano.function(model.inputs(), model.loss())
@@ -22,7 +22,7 @@ class Tester:
         num_batches = 0
 
         for minibatch in self.data_reader:
-            inp = self.model.prepare_input(minibatch)
+            inp = self.model.prepare_train_input(minibatch)
             test_loss_sum += self.f_loss(*inp)
             num_batches += 1
 
@@ -38,6 +38,7 @@ class Tester:
         else:
             raise NotImplementedError
 
+    # TODO: move to trainer object
     def log_validation_info(self, print_loss=True, print_metric=False, run_script=False):
 
         logger.info('Validation')
