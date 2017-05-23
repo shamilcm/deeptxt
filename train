@@ -73,7 +73,7 @@ if config.model == 'rnnlm':
     model = RNNLanguageModel(hyperparams=config.network_params, vocab=vocab)
 
 # Seq2Seq Models
-elif config.model == 'basic_seq2seq':
+elif config.model == 'seq2seq':
     from deeptxt.models.rnn_encoder_decoder import RNNEncoderDecoder as EncDec
     from deeptxt.io.readers.parallel_text_reader import ParallelTextReader
     train_data = ParallelTextReader(source_dataset_path=config.train_params.source_train_data,
@@ -91,7 +91,7 @@ elif config.model == 'basic_seq2seq':
 
     source_vocab = VocabManager(config.train_params.source_vocab_path, config.network_params.encoder_vocab_size)
     target_vocab = VocabManager(config.train_params.target_vocab_path, config.network_params.decoder_vocab_size)
-    model = EncDec(hyperparams=config.network_params, encoder_vocab=source_vocab, decoder_vocab=target_vocab, encode_bidirectional=True, use_attention=True)
+    model = EncDec(hyperparams=config.network_params, encoder_vocab=source_vocab, decoder_vocab=target_vocab, encode_bidirectional=config.network_params.encode_bidirectional, use_attention=config.network_params.use_attention)
 else:
     logger.error("Invalid Model name:" + config.model)
     sys.exit()
