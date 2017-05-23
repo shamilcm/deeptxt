@@ -94,6 +94,7 @@ elif config.model == 'seq2seq':
     model = EncDec(hyperparams=config.network_params, encoder_vocab=source_vocab, decoder_vocab=target_vocab, encode_bidirectional=config.network_params.encode_bidirectional, use_attention=config.network_params.use_attention)
 else:
     logger.error("Invalid Model name:" + config.model)
+    logger.error('Ensure that there are no quotations for the strings in the config files')
     sys.exit()
 
 
