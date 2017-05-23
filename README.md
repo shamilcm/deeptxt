@@ -13,7 +13,7 @@ deeptxt follows the same architecture as that used by [Nematus](https://github.c
 
 
 ```
-./train -c /path/to/config/file -o /path/to/output/dir -d cuda
+./train -c /path/to/config/file -o /path/to/output/dir -d <device>
 ```
 
 
