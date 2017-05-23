@@ -1,0 +1,82 @@
+#!/usr/bin/python
+
+import os, sys
+import time
+import argparse
+import numpy as np
+
+from deeptxt.config.config_parser import IniParser
+from deeptxt.io.vocab_manager import VocabManager
+from deeptxt.models.inference.beam_search import BeamSearch
+
+
+
+
+default_encoding = 'utf-8'
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--input-file', type=argparse.FileType('r'), default=sys.stdin, metavar='PATH', help="Path to input file (default: standard input)")
+parser.add_argument('-o', '--output-file', type=argparse.FileType('w'), default=sys.stdout, metavar='PATH', help="Path to output file (default: standard output)")
+parser.add_argument('-m', '--models', nargs='+', required=True, help='Path to model files')
+parser.add_argument('-v', '--vocabs', nargs='+', required=True, help='Space separated path to vocab files')
+parser.add_argument('-bs', '--beam-size', type=int, default=5, help='Size of the beam for beam search (default: 12)')
+parser.add_argument('-d', '--device', dest='device', default='cpu', help='Theano device')
+parser.add_argument('-log', '--log-file', help='Log to a file (default: stderr)')
+parser.add_argument('--n-best-list', type=argparse.FileType('w'), metavar='PATH', help='Path to output n-best list (Moses Format) (optional)' )
+
+
+args = parser.parse_args()
+
+import logging
+from deeptxt.utils import logutils
+logger = logging.getLogger(__name__)
+if args.log_file:
+    logutils.set_logger(out_dir=os.path.dirname(os.path.abspath(args.log_file)), log_file=os.path.basename(args.log_file))
+else:
+    logutils.set_logger()
+
+
+
+logger.info("Importing backend: Theano")
+from deeptxt.utils import theano_config
+if args.device == 'cpu':
+    logger.warning("Using CPU. To use GPU, use '--device cuda<device-number>'")
+theano_config.configure(device=args.device, dtype='float32')
+
+
+
+# TODO: load model type, also, use_attention and encode_bidirectional flags
+model_type='rnn_enc_dec'
+
+if model_type == 'rnn_enc_dec':
+
+    from deeptxt.models.rnn_encoder_decoder import RNNEncoderDecoder
+    logger.info("Loading model and vocabulary files")
+    # TODO: ensemble decoding
+    loaded_arrs = np.load(args.models[0])
+    model_hyperparams = loaded_arrs['model_hyperparams'][()]
+    encoder_vocab = VocabManager(vocab_path=args.vocabs[0], vocab_size=model_hyperparams.encoder_vocab_size)
+    decoder_vocab = VocabManager(vocab_path=args.vocabs[1], vocab_size=model_hyperparams.decoder_vocab_size)
+    model = RNNEncoderDecoder(hyperparams=model_hyperparams, decoder_vocab=decoder_vocab, encoder_vocab=encoder_vocab, use_attention=True, encode_bidirectional=True)
+
+    model.load_params(loaded_arrs)
+    logger.info("Building model")
+    model.build()
+    model.build_sampler(sampling=False)
+
+
+for index, line in enumerate(args.input_file):
+        sample = line.decode(default_encoding).strip()
+        stime = time.time()
+        logger.info("Decoding sample " + str(index) + ": " + sample)
+        
+        beam_search = BeamSearch(beam_size=12, sample=sample,  model=model, max_length=15)
+        best_hypothesis = beam_search.best_hypothesis()
+        best_score = beam_search.best_hypothesis_score()
+        logger.info("BEST: " + best_hypothesis  + '[Score: %s ]' + "{0:.4f}".format(best_score))
+        args.output_file.write(best_hypothesis.encode(default_encoding) + '\n')
+
+        etime = time.time()
+        logger.info("Decoding took " + "{0:.4f}".format(etime - stime) + " seconds")
+
+        
