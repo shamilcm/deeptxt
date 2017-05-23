@@ -13,7 +13,7 @@ from ..nn.layers.dense import Dense
 from ..nn.activations import Activation
 
 import logging
-from ..utils import logutils 
+from ..utils import logutils
 logger = logging.getLogger(__name__)
 
 
@@ -29,7 +29,7 @@ class RNNEncoderDecoder(Model):
         # hyperparams.encoder_vocab_size and hyperparams.decoder_vocab_size setting to max
         # TODO: Uncomment this and throw error
         #hyperparams.encoder_vocab_size = min(hyperparams.encoder_vocab_size, encoder_vocab.vocab_size)
-        #hyperparams.decoder_vocab_size = min(hyperparams.decoder_vocab_size, decoder_vocab.vocab_size)
+        #hyperparams.decodeRr_vocab_size = min(hyperparams.decoder_vocab_size, decoder_vocab.vocab_size)
 
         # Preparing and Initializing Network Weights & Biases
         self.setup()
@@ -179,17 +179,17 @@ class RNNEncoderDecoder(Model):
         logit_enc_context = self.encoder_context_transform.build(context) # dim(context) = #timesteps x #samples x context_dim
         logit = self.word_probs_transform.build(Activation.tanh(logit_decoder_rnn + logit_prev_emb + logit_enc_context)) # dim(logit) = #timesteps x #samples x #vocab_size
 
-        # removing the extra timestep due to the adding of <bos> for target 
+        # removing the extra timestep due to the adding of <bos> for target
         #logit = logit[:-1]
         # to make it the same size as the reference input, removing an extra timestep
         # that occured because of adding <bos> in the beginning
         #self.logit_2d = logit.reshape([(logit.shape[0])*logit.shape[1], logit.shape[2]])
         # reshaping logit as (#timesteps*#samples) x vocab_size and performing softmax across vocabulary
-        self.probs = T.nnet.softmax(logit.reshape([logit.shape[0]*logit.shape[1], logit.shape[2]])) 
+        self.probs = T.nnet.softmax(logit.reshape([logit.shape[0]*logit.shape[1], logit.shape[2]]))
         #self.probs = T.nnet.softmax(self.logit_2d) #dim(probs) = (#timesteps*#samples) x vocab_size
-        
+
         #self.probs = self.probs.reshape([logit.shape[0], logit.shape[1], logit.shape[2]])
-        
+
 
 
 
@@ -198,11 +198,12 @@ class RNNEncoderDecoder(Model):
 
         # Required for the loss function
         self._predictions = self.probs.reshape([logit.shape[0], logit.shape[1], logit.shape[2]])[:-1]  # remove last row because of extra <bos> adding oen additional timestep
-        self._targets = self.y[1:] 
+        self._targets = self.y[1:]
         self._targets_mask = self.y_mask[1:]
 
-        #Building loss function
+        # Building loss function
         self.build_loss()
+
 
 
     def build_loss(self):
@@ -218,7 +219,7 @@ class RNNEncoderDecoder(Model):
 
         ### Method 2
         #self._loss = T.nnet.categorical_crossentropy(self.probs, y_flat)
-        
+
         ### Method 3
         #y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
         #y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
@@ -230,7 +231,7 @@ class RNNEncoderDecoder(Model):
         from ..objectives.losses import categorical_crossentropy
         targets, targets_mask = self.targets()
         self._loss = categorical_crossentropy(targets=targets, predictions=self.predictions(), mask=targets_mask)
-        
+
         ## Section to remove after debugging
         try:
             self.debug = self._loss[1]
@@ -244,7 +245,7 @@ class RNNEncoderDecoder(Model):
         #self._loss = -T.log(self._predictions.flatten()[y_flat_idx])
         #self._loss = self._loss.reshape([targets.shape[0], targets.shape[1]])
         #self._loss = (self._loss * targets_mask).sum(0)
-        #self._loss = self._loss.mean()       
+        #self._loss = self._loss.mean()
 
 
     def build_sampler(self, sampling=True):
@@ -268,7 +269,8 @@ class RNNEncoderDecoder(Model):
 
     def sample(self, batch, num_samples=5):
         source, source_mask, target, target_mask = self.prepare_train_input(batch)
-        num_samples = np.minimum(1, source.shape[1])
+        # find if num_samples or source is fewer
+        num_samples = np.minimum(num_samples, source.shape[1])
         # TODO: replace by random sampling:
         source = source[:,0:num_samples]
         source_mask = source_mask[:,0:num_samples]
@@ -361,3 +363,38 @@ class RNNEncoderDecoder(Model):
         target_mask = np.array([[1.] + [1.]*len(target_instance[:max_length_target]) + [0.]*(max_length_target-len(target_instance)) for target_instance in target], dtype='float32').transpose()
         target = np.array([[-1] + target_instance[:max_length_target]  + [0.]*(max_length_target-len(target_instance)) for target_instance in target], dtype='int64').transpose()
         return source, source_mask, target, target_mask
+
+    def prepare_test_input(self, sentence):
+        tokens = sentence.split() + [self.encoder_vocab.eos]
+        inp = np.array([[self.encoder_vocab.get_index(token) for token in tokens ]], dtype='int64')
+        inp_mask = np.array([[1.]*(len(tokens))], dtype='float32')
+        return inp.transpose(), inp_mask.transpose()
+
+    def prepare_sampler_input(self, prev_token_list, initializer_output=None):
+        num_samples = len(prev_token_list)
+        y =  np.array([[self.decoder_vocab.get_index(token) for token in prev_token_list]])
+        y_mask = np.array([[1.]*num_samples],dtype='float32')
+
+        if initializer_output:
+            encoder_outputs = initializer_output[0]
+            decoder_init = initializer_output[-1]
+
+            # tiling
+            encoder_outputs = np.tile(encoder_outputs, (1, num_samples, 1))
+            decoder_init = np.tile(decoder_init, (num_samples, 1))
+
+            if len(initializer_output) == 3:
+                x_mask = initializer_output[1]  # for attention-based models
+                x_mask = np.tile(x_mask, (1, num_samples))
+
+                initializer_output = [encoder_outputs, x_mask, decoder_init]
+
+
+            elif len(initializer_output) == 2:
+                initializer_output = [encoder_outputs, decoder_init]
+
+            rets = [y, y_mask] + initializer_output
+            return rets
+        else:
+            return [y, y_mask]
+
