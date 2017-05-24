@@ -176,7 +176,7 @@ for epoch in xrange(config.train_params.num_epochs):
         if config.train_params.save_freq > 0 and trainer.num_updates % config.train_params.save_freq == 0:
             model_path = args.output_dir + '/model_iter' + str(trainer.num_updates) + '.npz'
             logger.info("Saving model:" + model_path)
-            trainer.save_model(modelpath, trainer.num_updates, validator)
+            trainer.save_model(model_path, trainer.num_updates, validator)
         # sampling
         if config.train_params.sampling_freq > 0 and trainer.num_updates % config.train_params.sampling_freq == 0:
             trainer.sampling(minibatch, num_samples=1)
