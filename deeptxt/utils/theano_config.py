@@ -5,7 +5,7 @@ def configure(device='cpu', dtype='float32'):
     flags = "device=" + device 
     flags += ',floatX=' + dtype
     flags += ',warn_float64=warn' 
-    flags += ',exception_verbosity=high'
+    #flags += ',exception_verbosity=high'
     #flags += ',optimizer=fast_compile'
     os.environ["THEANO_FLAGS"]  = flags
     import theano
