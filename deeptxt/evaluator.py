@@ -21,7 +21,13 @@ class Evaluator:
         test_loss_sum = 0.0
         num_batches = 0
 
-        for minibatch in self.data_reader:
+        while True:
+            minibatch = self.data_reader.next()
+
+            # end of file
+            if minibatch is None:
+                break
+
             inp = self.model.prepare_train_input(minibatch)
             test_loss_sum += self.f_loss(*inp)
             num_batches += 1
