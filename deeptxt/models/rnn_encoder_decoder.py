@@ -269,8 +269,8 @@ class RNNEncoderDecoder(Model):
         sampler_output = [self.probs, next_token_index, self.decoder_outputs]
         self.sampler = theano.function(sampler_input, sampler_output)
 
-    def sample(self, batch, num_samples=5):
-        source, source_mask, target, target_mask = self.prepare_train_input(batch)
+    def sample(self, model_input,  num_samples=5):
+        source, source_mask, target, target_mask = model_input
         # find if num_samples or source is fewer
         num_samples = np.minimum(num_samples, source.shape[1])
         # TODO: replace by random sampling:
