@@ -16,45 +16,77 @@ class TextReader:
             self.dataset = gzip.open(self.dataset_path,'r')
         else:
             self.dataset = open(self.dataset_path, 'r')
-    
+    '''
     def __iter__(self):
         """
         Default method for iterator object
         """
         return self
-    
+    '''
+
+
     def reset(self):
         """
         Resets the file pointer back to the beginning
         """
         self.dataset.seek(0)
+
+    def get_batch(self):
+        """
+        Default method for iterator object
+        :return: returns the batch
+        """
+        samples = []
+        while True:
+            line = self.dataset.readline()
+            if line == '': # check EOF
+                if not samples:
+                    self.reset()
+                    return samples
+                else:
+                    return samples
+            tokens = line.decode(self.encoding).strip().split()
+            if len(tokens) > self.max_length:
+                continue
+            samples.append(tokens)
+            if len(samples) >= self.batchsize:
+                break
+        return samples
+
+
+    def fill_cache(self):
+        cache_samples = []
+        eof = False
+        for i in xrange(self.cache_size):
+            batch_samples = self.get_batch()
+
+            # empty batch_samples indicates end of file
+            if not batch_samples:
+                eof = True
+                break
+            else:
+                cache_samples += batch_samples
+
+        # sort the batches by length, to make training more efficient
+        # varying lengths may create large and sparse matrices for all updates.
+        if self.sort_by_target == True:
+            cache_samples = sorted(cache_samples, key=lambda x: len(x[1]))
+
+        self.cache = [cache_samples[i:i+self.batchsize] for i in xrange(0, len(cache_samples), self.batchsize)]
         
+        # if eof is within cache, i.e. last of the batches have been read. Then None is put at the beginning
+        if eof == True:
+            self.cache = [None] + self.cache
+
+
+
     def next(self):
         """
         Default method for iterator object
         :return: returns the batch
         """
-        if self.max_length == None:
-            lines = list(itertools.islice(self.dataset, self.batchsize))   
-            #print [line.split() for line in lines]
-            if lines == []:
-                self.reset()
-                raise StopIteration
-            samples = [[token for token in line.decode(self.encoding).strip().split()] for line in lines]
-        else:
-            samples = []
-            while True:
-                line = self.dataset.readline()
-                if line == '': # check EOF
-                    if samples == []:
-                        self.reset()
-                        raise StopIteration
-                    else:
-                        return samples
-                tokens = line.decode(self.encoding).strip().split()
-                if len(tokens) > self.max_length:
-                    continue
-                samples.append(tokens)
-                if len(samples) >= self.batchsize:
-                    break
+        if not self.cache:
+            self.fill_cache()
+
+        samples = self.cache.pop()
         return samples
