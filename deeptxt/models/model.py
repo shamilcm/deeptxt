@@ -43,7 +43,7 @@ class Model:
     def build_sampler(self):
         pass
 
-    def sample(self, batch, num_samples):
+    def sample(self, model_input, num_samples):
         return [{'OUTPUT':'sampling is not implemented for this model!'}]
 
     # TODO: make this abstract
