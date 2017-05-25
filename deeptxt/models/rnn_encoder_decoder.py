@@ -141,7 +141,7 @@ class RNNEncoderDecoder(Model):
             encoder_outputs_rev = self.encoder_rnn_layer_r2l.build(encoder_emb_rev,  self.x_mask[::-1])[0]
             self.encoder_outputs = T.concatenate([self.encoder_outputs, encoder_outputs_rev[::-1]], axis=self.encoder_outputs.ndim - 1)
 
-        self.debug = self.encoder_outputs.shape
+        #self.debug = self.encoder_outputs.shape
 
         if self.use_attention == True:
             # use unweighted mean of encoder_outputs to initialize the decoder
@@ -209,12 +209,12 @@ class RNNEncoderDecoder(Model):
     def build_loss(self):
         # TODO: Make it better?
         # y[0]  is bos, remove it to calculate loss
-        #y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
-        #y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
+        # y_flat = self.y[1:].flatten() #x_flat: a linear array with size #timesteps*#samples
+        # y_flat_idx = T.arange(y_flat.shape[0]) * (self.decoder_vocab.vocab_size) + y_flat
 
-        #self._loss = -T.log(self.probs.flatten()[y_flat_idx])
-        #self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
-        #self._loss = (self._loss * self.y_mask[1:]).sum(0)
+        # self._loss = -T.log(self.probs.flatten()[y_flat_idx])
+        # self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
+        # self._loss = (self._loss * self.y_mask[1:]).sum(0)
         # self._loss = self._loss.mean()
 
         ### Method 2
@@ -228,16 +228,18 @@ class RNNEncoderDecoder(Model):
         #self._loss = self._loss.reshape([self.y.shape[0]-1, self.y.shape[1]])
         #self._loss = (self._loss * self.y_mask[1:]).sum(0)
         # self._loss = self._loss.mean()
+
+        ### Method 4
         from ..objectives.losses import categorical_crossentropy
         targets, targets_mask = self.targets()
         self._loss = categorical_crossentropy(targets=targets, predictions=self.predictions(), mask=targets_mask)
 
         ## Section to remove after debugging
-        try:
-            self.debug = self._loss[1]
-            self._loss = self._loss[0]
-        except:
-            pass
+        #try:
+        #    self.debug = self._loss[1]
+        #    self._loss = self._loss[0]
+        #except:
+        #    pass
 
         #y_flat = targets.flatten()
         #y_flat_idx = T.arange(y_flat.shape[0]) * self._predictions.shape[-1] + y_flat
