@@ -131,7 +131,7 @@ if hasattr(config.train_params, 'clip_norm'):
 if hasattr(config.train_params, 'clip_value'):
     kwargs_optimizer['clip_value'] = config.train_params.clip_value
 optimizer = Optimizer(learning_rate=config.train_params.learning_rate, **kwargs_optimizer)
-trainer = Trainer(model=model, optimizer=optimizer)
+trainer = Trainer(model=model, optimizer=optimizer, cache_minibatches=True)
 
 logger.info('Building validator')
 validator = Evaluator(data_reader=validation_data, model=model)
@@ -145,22 +145,20 @@ if hasattr(config.train_params, 'init_model'):
 
 for epoch in xrange(config.train_params.num_epochs):
 
-    num_samples_seen = 0
-    num_words_seen = 0
+
     train_loss_sum = 0
     train_batches = 0
-    start_time = time.time()
 
     while True:
 
-        minibatch = train_data.next()
-
-        # end of epoch
-        if minibatch == None:
-            break
 
         # Update the paramaters after computing loss
-        train_loss = trainer.update(minibatch, verbose=args.verbose)
+        train_loss = trainer.update(data_reader=train_data, verbose=args.verbose, minibatch_index=train_batches)
+
+        # end of epoch is reached
+        if train_loss is None:
+            break
+
         # Check if loss is NaN or infitnity
         if np.isnan(train_loss) or np.isinf(train_loss):
             logger.error("NaN detected at Update:" + str(trainer.num_updates))
@@ -169,49 +167,36 @@ for epoch in xrange(config.train_params.num_epochs):
         # Incrementing updates and adding loss
         train_loss_sum +=  train_loss
         train_batches += 1
-        num_samples_seen += len(minibatch)
-
-        ## assuming the last sample will give the target
-        ## speed calculated based on target words
-        num_words_seen += sum([len(sample[-1]) for sample in minibatch])
 
         # displaying
         if config.train_params.display_freq > 0 and trainer.num_updates % config.train_params.display_freq == 0:
-
-            duration = time.time() - start_time
-            time_per_update = duration / config.train_params.display_freq
-            words_per_second = int( num_words_seen * 1.0 / duration)
-            samples_per_second = int( num_samples_seen * 1.0 / duration)
-
-            trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches, time_per_update = time_per_update, speed = [str(words_per_second) + ' words/s', str(samples_per_second) + ' samples/s'])
-
-            start_time = time.time()
-            num_words_seen = 0
-            num_samples_seen = 0
-
+            trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches)
 
         # validation
         if config.train_params.validation_freq > 0 and trainer.num_updates % config.train_params.validation_freq == 0:
             validator.log_validation_info()
+
         # saving
         if config.train_params.save_freq > 0 and trainer.num_updates % config.train_params.save_freq == 0:
             model_path = args.output_dir + '/model_iter' + str(trainer.num_updates) + '.npz'
             logger.info("Saving model: " + model_path)
             trainer.save_model(model_path, validator)
+
         # sampling
         if config.train_params.sampling_freq > 0 and trainer.num_updates % config.train_params.sampling_freq == 0:
-            trainer.sampling(minibatch, num_samples=1)
+            trainer.sampling(num_samples=1)
 
     # dispalying
     trainer.log_train_info(epoch=epoch, loss=train_loss_sum, num_batches=train_batches)
+
     # validation
     validator.log_validation_info()
-    logger.info("Epoch %d completed. %d samples seen. Saving." %(epoch, num_samples))
+    logger.info("Epoch %d completed. Saving." %(epoch))
 
-    if args.overwrite == True:
     # saving
-        trainer.save_model(args.output_dir + '/model_epoch' + str(epoch) + '.npz', validator)
+    if args.overwrite == True:
+        trainer.save_model(args.output_dir + '/model.npz', validator)
     else:
-        trainer.save_model(args.output_dir + '/model' + str(epoch) + '.npz', validator)
+        trainer.save_model(args.output_dir + '/model_epoch' + str(epoch) + '.npz', validator)
 
 
