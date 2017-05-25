@@ -28,6 +28,7 @@ class Trainer:
 
     def update(self, minibatch, max_length=None, verbose=False):
         inp = self._model.prepare_train_input(minibatch, max_length)
+        #print "DEBUG, shape:", [i.shape for i in inp]
         if inp is None:
             return None
 
@@ -65,14 +66,14 @@ class Trainer:
         self.num_updates =  loaded_arrs['num_updates']
 
 
-    def log_train_info(self, epoch, loss, num_batches=None,  time_per_update=None):
+    def log_train_info(self, epoch, loss, num_batches=None,  time_per_update=None, speed=None):
         log_msg = 'Epoch#: %d'  % epoch
         if num_batches:
-            log_msg += '\tMinibatch#: %d' % num_batches
-        log_msg += '\tUpdate#: %d' % self.num_updates
-        log_msg += '\tAvg. Loss: ' + "{0:.4f}".format(loss/num_batches)
+            log_msg += '\t| Minibatch#: %d' % num_batches
+        log_msg += '\t| Update#: %d' % self.num_updates
+        log_msg += '\t| Avg. Loss: ' + "{0:.4f}".format(loss/num_batches)
 
-        if time_per_update:
-            log_msg +=  '\tTime/Update: ' + "{0:.4f}".format(time_per_update) + 's'
+        if speed:
+            log_msg +=  '\t| Speed: ' + ' '.join(speed)
 
         logger.info(log_msg)
