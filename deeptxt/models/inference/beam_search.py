@@ -43,6 +43,8 @@ class BeamSearch:
                 beam_object = self.active_beam[beam_index]
                 last_token = beam_object.hypothesis[-1]
                 if last_token == self._model.decoder_vocab.eos:
+                    # remove the end of sentence token and append to the completed beam
+                    beam_object.hypothesis = beam_object.hypothesis[:-1]
                     self.completed_beam.append(beam_object)
                     pop_indices[beam_index] = True
                     active_beam_size = active_beam_size - 1
