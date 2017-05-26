@@ -43,11 +43,19 @@ class Trainer:
 
         if minibatch_index and self.cache_minibatches == True and minibatch_index in self.input_cache:
             self.current_input = self.input_cache[minibatch_index]
+
+            # reached end of the data
+            if self.current_input == None:
+                return None
         else:
             minibatch = data_reader.next()
             # reached end of epoch, return None as loss
             if minibatch is None:
+                if minibatch_index and self.cache_minibatches == True:
+                    self.input_cache[minibatch_index] = None
                 return None
+
+
             self.current_input = self._model.prepare_train_input(minibatch, max_length)
 
             if self.cache_minibatches == True:
