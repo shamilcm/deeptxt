@@ -20,7 +20,7 @@ parser.add_argument('-o', '--output-file', type=argparse.FileType('w'), default=
 parser.add_argument('-m', '--models', nargs='+', required=True, help='Path to model files')
 parser.add_argument('-v', '--vocabs', nargs='+', required=True, help='Space separated path to vocab files')
 parser.add_argument('-bs', '--beam-size', type=int, default=5, help='Size of the beam for beam search (default: 5)')
-parser.add_argument('-ml', '--max-length', default=100, help='Maximum length of the output hypothesis (default: 100)')
+parser.add_argument('-ml', '--max-length', default=100, type=int, help='Maximum length of the output hypothesis (default: 100)')
 parser.add_argument('-d', '--device', dest='device', default='cpu', help='Theano device')
 parser.add_argument('-log', '--log-file', help='Log to a file (default: stderr)')
 parser.add_argument('--n-best-list', type=argparse.FileType('w'), metavar='PATH', help='Path to output n-best list (Moses Format) (optional)' )
@@ -72,9 +72,9 @@ for index, line in enumerate(args.input_file):
         logger.info("Decoding sample " + str(index) + ": " + sample)
         
         beam_search = BeamSearch(beam_size=args.beam_size, sample=sample,  model=model, max_length=args.max_length)
-        best_hypothesis = beam_search.best_hypothesis()
+        best_hypothesis = beam_search.best_hypothesis_sentence()
         best_score = beam_search.best_hypothesis_score()
-        logger.info("BEST: " + best_hypothesis  + '[Score: %s ]' + "{0:.4f}".format(best_score))
+        logger.info("BEST: " + best_hypothesis  + '[Score: ' + "{0:.4f}".format(best_score) + ']')
         args.output_file.write(best_hypothesis.encode(default_encoding) + '\n')
 
         etime = time.time()
