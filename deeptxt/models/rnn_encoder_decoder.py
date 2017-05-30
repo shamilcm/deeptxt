@@ -372,30 +372,38 @@ class RNNEncoderDecoder(Model):
         inp_mask = np.array([[1.]*(len(tokens))], dtype='float32')
         return inp.transpose(), inp_mask.transpose()
 
-    def prepare_sampler_input(self, prev_token_list, initializer_output=None):
+    def prepare_sampler_input(self, prev_token_list, decoder_states, initializer_output=None):
         num_samples = len(prev_token_list)
+
+        assert len(prev_token_list) == decoder_states.shape[0], 'Number of previous tokens, and number of decoder states should match'
         y =  np.array([[self.decoder_vocab.get_index(token) for token in prev_token_list]])
         y_mask = np.array([[1.]*num_samples],dtype='float32')
 
         if initializer_output:
             encoder_outputs = initializer_output[0]
-            decoder_init = initializer_output[-1]
-
-            # tiling
             encoder_outputs = np.tile(encoder_outputs, (1, num_samples, 1))
-            decoder_init = np.tile(decoder_init, (num_samples, 1))
+
+
+            # preparing decoder init
+            #decoder_state = initializer_output[-1]
+            #decoder_state = np.tile(decoder_state, (num_samples, 1))
+
+            #print "DEBUG", decoder_state.shape
+            #print "DEB", decoder_states.shape
 
             if len(initializer_output) == 3:
+
+                # preparing xmask
                 x_mask = initializer_output[1]  # for attention-based models
                 x_mask = np.tile(x_mask, (1, num_samples))
 
-                initializer_output = [encoder_outputs, x_mask, decoder_init]
+                encoder_info = [encoder_outputs, x_mask] 
 
 
             elif len(initializer_output) == 2:
-                initializer_output = [encoder_outputs, decoder_init]
+                encoder_info = [encoder_outputs]
 
-            rets = [y, y_mask] + initializer_output
+            rets = [y, y_mask] + encoder_info + [decoder_states]
             return rets
         else:
             return [y, y_mask]
