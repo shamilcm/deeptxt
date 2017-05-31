@@ -32,7 +32,7 @@ logger.info("Importing backend: Theano")
 from deeptxt.utils import theano_config
 if args.device == 'cpu':
     logger.warning("Using CPU. To use GPU, use '--device cuda<device-number>'")
-theano_config.configure(device=args.device, dtype='float32')
+theano_config.configure(device=args.device, dtype='float32', verbose=args.verbose)
 
 from deeptxt.trainer import Trainer
 from deeptxt.evaluator import Evaluator
