@@ -97,7 +97,7 @@ class ParallelTextReader:
         # sort the batches by length, to make training more efficient
         # varying lengths may create large and sparse matrices for all updates.
         if self.sort_by_target == True:
-            cache_samples = sorted(cache_samples, key=lambda x: len(x[1]))
+            cache_samples = sorted(cache_samples, key=lambda x: len(x[1]), reverse=True)
 
         self.cache = [cache_samples[i:i+self.batchsize] for i in xrange(0, len(cache_samples), self.batchsize)]
         self.cache.reverse()
