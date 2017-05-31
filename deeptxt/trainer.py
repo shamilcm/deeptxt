@@ -49,6 +49,7 @@ class Trainer:
                 return None
         else:
             minibatch = data_reader.next()
+
             # reached end of epoch, return None as loss
             if minibatch is None:
                 if minibatch_index and self.cache_minibatches == True:
@@ -72,10 +73,12 @@ class Trainer:
         if verbose == True and self.f_debug:
             logger.debug('Debug Message:' + str(self.f_debug(*self.current_input)))
 
+
         train_loss = self.forward(*self.current_input) #Calculate loss and gradient
         self.backward()  # Update prameters
 
         self.num_updates += 1
+
         return train_loss
 
     def sampling(self,  num_samples=5):
@@ -101,8 +104,8 @@ class Trainer:
             # TODO: setter method
             validator._history = loaded_arrs['validation_history']
         self._model.load_params(loaded_arrs)
-        self.num_updates =  loaded_arrs['num_updates']
-
+        self.num_updates =  int(loaded_arrs['num_updates'])
+        self.last_log_updates = int(loaded_arrs['num_updates'])
 
     def log_train_info(self, epoch, loss, num_batches=None):
 
@@ -125,4 +128,5 @@ class Trainer:
 
         # resetting timer and setting last updates
         self.last_log_time = time.time()
+
         self.last_log_updates = self.num_updates
