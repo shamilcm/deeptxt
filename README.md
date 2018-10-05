@@ -1,5 +1,7 @@
 ## deeptxt
 
+Author: shamil.cm@gmail.com
+
 A neural machine translation and recurrent language modelling toolkit, currently supporting Theano backend. 
 
 deeptxt follows the same architecture as that used by [Nematus](https://github.com/rsennrich/nematus)  and [DL4MT-Tutorial](https://github.com/nyu-dl/dl4mt-tutorial).
