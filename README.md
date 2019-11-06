@@ -8,7 +8,7 @@ deeptxt follows the same architecture as that used by [Nematus](https://github.c
 
 ### Requirements
 
-* Theano, Pythhon and Numpy 
+* Theano, Python and Numpy 
 
 
 ### Training
